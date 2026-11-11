@@ -41,13 +41,23 @@ if getattr(sys, 'frozen', False):
 
 # Земля
 ground = Entity(
-    model='plane', 
-    scale =(3000, 1, 3000), 
-    color=color.gray, 
-    texture='white_cube', 
+    model='plane',
+    scale=(3000, 1, 3000),
+    texture='grass',
+    texture_scale=(300, 300), # Повторяем текстуру, чтобы трава была четкой
+    collider='box'
+)
+
+# Многоэтажка 
+building = Entity(
+    model='neboskreb11.glb', 
+    color=color.dark_gray,
+    scale=1.15, 
+    position=(317, 2, -2),
+    rotation=(0, 0, 0),
     collider='box'
 
-) 
+)
 
 # Игрок от первого лица
 player = FirstPersonController(position=(30, 0, 0))
@@ -188,6 +198,9 @@ def update():
     drone2.x += drone2_speed * time.dt 
     missile.x += missile_speed * time.dt
     transport_plane.x += trandsport_speed * time.dt
+    dronekiborg10.x += dronekiborg10_speed * time.dt 
+    planez.x += planez_speed * time.dt 
+    fighter12.x += fighter12_speed * time.dt 
 
     if fighter_plane.x > 700: 
         fighter_plane.x = -700
@@ -207,10 +220,22 @@ def update():
     if transport_plane.x > 3000: 
         transport_plane.x = -3000
 
+    if dronekiborg10.x > 1500: 
+        dronekiborg10.x = -1500
+
+    if planez.x > 1500: 
+        planez.x = -1500
+
+    if fighter12.x > 3000: 
+        fighter12.x = -3000
+
     pvo_missile.position += pvo_missile.forward * pvo_missile.speed * time.dt 
 
     """drone12.look_at(camera)
     drone12.position += drone12.forward * drone12.speed * time.dt"""
+
+    """fighter12.look_at(transport_plane)
+    fighter12.position += fighter12.forward * time.dt"""
 
     if bomber.x > 700: 
         bomber.x = -700 
@@ -276,26 +301,109 @@ avtomat_model = Entity(
     position=(0.5, -0.4, 1),
     rotation=(0, 90, 0),
     collider='box'
-
 )
 
-    
+# Автомат 2
+avtomat2_model = Entity(
+    model='gunveb.glb', 
+    color=color.dark_gray, 
+    scale=0.15, 
+    parent=camera, 
+    position=(0.5, -0.4, 1), 
+    rotation=(0, 180, 0),
+    collider='box',
+    enabled=False
+) 
+
+# Автомат 99
+avtomat3_model = Entity(
+    model='gunwar11.glb', 
+    color=color.dark_gray,
+    scale=0.15, 
+    parent=camera, 
+    position=(0.5, -0.4, 1),
+    rotation=(0, 180, 0), 
+    collider='box',
+    enabled=False
+)
+
 # Стрельба
+max_ammo = 30   
+current_ammo = max_ammo 
+total_ammo = 90
+
+ammo_text = Text(
+    text=f'{current_ammo}/{max_ammo}',
+    position=(0.7, -0.4),
+    scale=2, 
+    color=color.orange, 
+    origin=(1, -1)
+)
 
 def input(key):
+    global current_ammo, total_ammo
+
+    if key == '1': 
+        avtomat_model.enabled = True
+        avtomat2_model.enabled = False
+        avtomat3_model.enabled = False
+    
+    if key == '2':
+        avtomat_model.enabled = False
+        avtomat2_model.enabled = True
+
+    if key == "3": 
+        avtomat_model.enabled = False
+        avtomat2_model.enabled = False
+        avtomat3_model.enabled = True 
+
+    if key == 'r' or key == 'к':
+
+        if current_ammo < max_ammo and total_ammo > 0: 
+            needed_ammo = max_ammo - current_ammo
+
+            if total_ammo >= needed_ammo:
+                total_ammo -= needed_ammo
+                current_ammo = max_ammo
+        else: 
+            current_ammo += total_ammo
+            total_ammo = 0 
+    
     if key == 'left mouse down':
-        # Создаем пулю перед автоматом
-        bullet = Entity(
-            model='sphere',
-            color=color.yellow,
-            scale=0.15,
-            position=camera.world_position + camera.forward * 1.5,
-            collider='box'
-        )
-        #  Запускаем пулю вперед в бесконечность!
-        bullet.animate_position(bullet.position + camera.forward * 40, duration=0.3, curve=curve.linear)
-        #  Удаляем пулю через секунду, чтобы игра не лагала
-        destroy(bullet, delay=1)
+        # Проверяем, что в руках есть хоть один автомат и остались патроны
+        if (avtomat_model.enabled or avtomat2_model.enabled or avtomat3_model.enabled) and current_ammo > 0: 
+            current_ammo -= 1 
+            # Обновляем текст патронов (теперь работает для обоих автоматов)
+            ammo_text.text = f'{current_ammo}/{total_ammo}'
+            print("Перезаряжено")
+            
+            # Создаём пулю перед камерой (работает для любого выбранного автомата)
+            bullet = Entity(
+                model='sphere',
+                color=color.yellow,
+                scale=0.15, 
+                position=camera.world_position + camera.forward * 1.5, 
+                collider='box'
+            )
+
+            bullet.animate_position(bullet.position + camera.forward * 40, duration=0.3, curve=curve.linear)
+            destroy(bullet, delay=1)
+        elif current_ammo == 0:
+            print("Нужна перезарядка нажми R!")
+
+    if key == 'escape': 
+        application.quit()
+
+# СОЗДАНИЕ ВРАГА И НАСТРОЙКА РОСТА
+random_enemy = Entity(
+    model='cube', 
+    color=color.red, 
+    scale=(1, 3, 1),      # Рост увеличен до 3
+    position=(10, 1.5, 10), # Начальная позиция врага
+    collider='box'
+)
+
+
 
 # Новое оружие AKF-91 
 
@@ -336,6 +444,33 @@ collider='box'
 )
 
 drone2_speed = 130
+
+# Дрон Киборг-10
+
+dronekiborg10 = Entity(
+    model='dronekiborg10.glb', 
+    color=color.gray, 
+    scale=0.97, 
+    position=(20, 85, -110), 
+    rotation=(0, -100, 0),
+    collider='box'
+
+)  
+
+dronekiborg10_speed = 100
+
+
+"""radius = 500 
+    angle = 0 
+
+def update(): 
+    global angle 
+    angle += dronekiborg10_speed * time.dt
+
+    dronekiborg10.x = math.cos(angle) * radius
+    dronekiborg10.z = math.cos(angle) * radius 
+
+    dronekiborg10.rotation_y = math.degrees(angle)""" 
 
 # Ракета дальнобойная 
 
@@ -418,7 +553,6 @@ def respawn_drone():
     drone.y = 25 
     drone.z = random.randint(-200, 200)
 
-
 # Дрон12 
 
 """drone12 = Entity(
@@ -455,6 +589,32 @@ transport_plane = Entity(
 )
 trandsport_speed = 150
 
+# Самолёт 2038 года 
+
+planez = Entity(
+    model='plane2038.glb', 
+    color=color.black,
+    position=(85, 230, -120),
+    rotation=(0, 90, 0), 
+    scale=9.5, 
+    collider='box'
+
+)
+planez_speed = 390
+
+# Истребитель 12 
+
+fighter12 = Entity(
+    model='fighter2.glb', 
+    color=color.black, 
+    position=(10, 143, -109),
+    rotation=(0, -90, 0), 
+    scale=3.4,
+    collider='box'
+
+)
+fighter12_speed = 500
+
 # Забор 
 
 fence = Entity(
@@ -464,6 +624,18 @@ fence = Entity(
     rotation=(0, 0, 0), 
     scale=3.5, 
     collider='box'
+
+) 
+
+# Окоп 
+
+trench1 = Entity(
+    model='trench.glb', 
+    color=color.brown, 
+    position=(287, -19, 0), 
+    rotation=(0, 0, 0), 
+    scale=3.8, 
+    collider='mesh'
 
 ) 
 
@@ -503,5 +675,15 @@ def input(key):
     global avtomat
     if key == '1' and avtomat: """
 
-    
+"""# Экспериментальный куб Blender 
+
+box = Entity(
+    model="untitled.glb", 
+    color=color.yellow, 
+    position=(0, 6, 0), 
+    scale=0.25,
+    collider='box'
+
+)"""
+
 app.run()
